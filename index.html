@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mindarium">
+  <meta name="theme-color" content="#fafaf8">
+  <meta name="description" content="A personal atlas of complex ideas, clearly explained.">
+  <title>Mindarium</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf8;
+      --fg: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e5e0;
+      --tag-bg: #efefec;
+      --accent: #1a56db;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111;
+        --fg: #e8e8e4;
+        --muted: #9ca3af;
+        --border: #2a2a2a;
+        --tag-bg: #1e1e1e;
+        --accent: #60a5fa;
+      }
+    }
+
+    html { background: var(--bg); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    #app {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 0 1.125rem;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 1.5rem 0 0.75rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+    .site-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .site-count {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.875rem;
+      padding: 0;
+      font-family: inherit;
+    }
+    .back-btn:hover { color: var(--fg); }
+
+    /* ── Home ── */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2.25rem;
+      margin-bottom: 0.6rem;
+    }
+    .section-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .concept-list { list-style: none; }
+    .concept-item { border-bottom: 1px solid var(--border); }
+    .concept-link {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0.8rem 0;
+      text-decoration: none;
+      color: var(--fg);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .concept-link:active { opacity: 0.5; }
+    .concept-name { font-size: 0.9875rem; font-weight: 500; }
+    .concept-source {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
+    .home-footer {
+      margin-top: 3rem;
+      padding: 1.5rem 0 3rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ── Article ── */
+    .article-wrap { padding-bottom: 4rem; }
+    .article-cat {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .article-title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 2rem;
+    }
+    .tag {
+      font-size: 0.68rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
+      background: var(--tag-bg);
+      color: var(--muted);
+    }
+    .article-body {
+      font-size: 1.055rem;
+      line-height: 1.8;
+    }
+    .article-body p { margin-bottom: 1.3rem; }
+    .article-body h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 2.25rem;
+      margin-bottom: 0.7rem;
+      letter-spacing: -0.01em;
+    }
+    .article-body strong { font-weight: 600; }
+    .article-body em { font-style: italic; }
+    .article-body ul, .article-body ol {
+      padding-left: 1.5rem;
+      margin-bottom: 1.3rem;
+    }
+    .article-body ul { list-style: disc; }
+    .article-body li { margin-bottom: 0.35rem; }
+    .article-footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { id: 'risk',        name: 'Risk & Uncertainty',  desc: 'Taleb\'s framework for navigating an unpredictable world' },
+  { id: 'logic',       name: 'Logic & Foundations', desc: 'The limits of formal systems and proof' },
+  { id: 'computation', name: 'Computation',          desc: 'What machines can and cannot do' },
+  { id: 'philosophy',  name: 'Philosophy',           desc: 'Questions about existence, knowledge, and observation' },
+];
+
+const CONCEPTS = [
+
+// ── RISK & UNCERTAINTY ────────────────────────────────────────────────────────
+
+{
+  id: 'antifragile',
+  title: 'Antifragile',
+  category: 'risk',
+  source: 'Taleb (2012)',
+  tags: ['risk', 'optionality', 'volatility', 'systems'],
+  body: `
+<p>Porcelain cups break when you drop them. Rubber balls bounce back. A mythological hydra grows two heads for every one cut off. Most discussions of risk recognize the first two categories. Nassim Taleb's 2012 book <em>Antifragile</em> insists we've been systematically ignoring the third — and that ignoring it costs us enormously.</p>
+<p>The fragile hates shocks. The robust absorbs them without changing. The antifragile <em>gains</em> from them. Taleb's central claim is that this third category is ubiquitous — in biology, economics, innovation, and institutions — but because we have no word for it, we have no clear thinking about it. The absence of the concept is itself the problem.</p>
+<h2>The Mechanics</h2>
+<p>Antifragility arises whenever there is a nonlinear, asymmetric response to disorder. If the downside from bad events is bounded while the upside from good events is not, you are antifragile to those events. If the reverse — large downside, capped upside — you are fragile.</p>
+<p>Evolution is the canonical example. Individual organisms are fragile — a pathogen wipes them out. But the gene pool, exposed to the pathogen, selects for resistant variants. Genetic mutation is random error, but the system extracts benefit from it. Redundancy, variation, and selection are the mechanism. The system gains from the volatility that destroys its components. This is why monocultures fail catastrophically: they eliminate the variation that is the engine of antifragility.</p>
+<p>Optionality is the financial version. If you own an option, your downside is capped at the premium paid; your upside is theoretically unlimited. Taleb's argument is that being antifragile is essentially equivalent to holding implicit options on volatility, whether you recognize them or not.</p>
+<h2>What Makes Systems Fragile</h2>
+<p>The most dangerous form of fragility is hidden fragility — systems that appear robust because they haven't been stressed, but are accumulating brittleness under the surface. Taleb calls this the Turkey Problem. A turkey is fed 1,000 days in a row. Each feeding reinforces its model that humans are benevolent providers. On day 1,001, Thanksgiving. The turkey's model was perfectly fitted to its history and spectacularly wrong about its future. The problem isn't insufficient data — it's that the most important event is outside the historical record by definition.</p>
+<p>Fragility is often manufactured by the interventions designed to prevent it. Suppressing small forest fires allows fuel to accumulate until a catastrophic one is unavoidable. Bailing out banks prevents the small failures that would discipline risk-taking, building systemic fragility until a cascade becomes inevitable. Constant pain management prevents the micro-damage that builds muscle. Absence of stress is not safety — it is often the setup for a different, larger failure.</p>
+<h2>The Barbell Strategy</h2>
+<p>The practical heuristic: put most of your exposure in extremely safe positions and a small fraction in extremely aggressive ones. Avoid the middle — the "moderately risky" zone — because moderate risk tends to be fragile: downside can be catastrophic while upside is capped. For engineering: prefer architectures with many small independent components that can fail gracefully over monolithic systems that appear robust until they catastrophically fail all at once. For experimentation: run many small cheap experiments rather than one large expensive bet. Each failed experiment provides information at bounded cost.</p>
+<p>When you see a system that hasn't been stressed in a long time, when you see a history with no variance, when you see processes designed to eliminate all failure — ask what fragility is being accumulated below the surface. The surface smoothness is the warning sign, not the safety signal.</p>
+`},
+
+{
+  id: 'skin-in-the-game',
+  title: 'Skin in the Game',
+  category: 'risk',
+  source: 'Taleb (2018)',
+  tags: ['accountability', 'incentives', 'ethics', 'asymmetry'],
+  body: `
+<p>In Hammurabi's Code, 3,700 years ago, there was a provision for architects: if a builder constructs a house that collapses and kills the owner, the builder shall be put to death. This sounds barbaric. It is also one of the most elegant risk-management systems ever devised. The builder who bears the consequences of his own construction will build very differently than one who doesn't.</p>
+<p>Nassim Taleb's 2018 book <em>Skin in the Game</em> argues that this ancient principle — having a personal stake in the outcomes you influence — is the most important and most violated principle in modern institutional life. The modern world has systematically separated decision-making from consequence, and this separation is the source of most of its fragilities.</p>
+<h2>The Asymmetry Problem</h2>
+<p>When someone can gain from an outcome but bears no cost if it fails, they will systematically take more risk than is socially optimal. This isn't a character flaw — it's a structural consequence of asymmetric payoffs. Wall Street traders who receive bonuses when bets pay off but face no personal loss when they don't will bet recklessly. Consultants who recommend restructuring but don't work at the restructured company will recommend more aggressively than someone who has to live with the outcome. Politicians who launch wars they don't fight in will launch more wars.</p>
+<p>The problem isn't that these people are dishonest. It's that the incentive structure makes their stated beliefs unreliable. A financial advisor who manages other people's money but keeps his own in cash is telling you something — not through words, but through behavior. <strong>Watch what people do with their own money, not what they say about yours.</strong></p>
+<h2>Why Skin in the Game Generates Knowledge</h2>
+<p>Beyond ethics, Taleb argues that skin in the game is an epistemic requirement. Real knowledge about risk comes from bearing the consequences of being wrong. The trader who loses money when his model fails learns things about risk that no academic studying the same model from the outside ever will. The entrepreneur who goes bankrupt understands market dynamics at a level a business school professor cannot replicate.</p>
+<p>This is why Taleb is suspicious of experts who advise on matters they have no personal exposure to. The doctor who recommends surgery he wouldn't choose for himself. The economist who prescribes austerity from a tenured position. Their distance from consequence means their models of reality are systematically less tested than those of practitioners. This doesn't mean practitioners are always right — it means their errors are self-correcting in a way that protected experts' errors are not. The entrepreneur's bad ideas get bankrupted; the consultant's bad ideas get another engagement.</p>
+<h2>The Minority Rule</h2>
+<p>One of the book's sharpest insights: a small, intransigent minority with skin in the game can dominate a compliant majority. If 3% of a population will only eat kosher food and the other 97% don't care either way, a food producer supplying both groups will make everything kosher. The intransigent minority sets the standard, not the flexible majority.</p>
+<p>This explains the asymmetric influence of determined minorities throughout history — in religious practices, dietary standards, linguistic norms, and social conventions. The people with the most to lose from deviating will outcompete those who merely prefer one outcome over another. In any system where some participants care deeply and others are indifferent, the deeply caring ones disproportionately shape outcomes. Skin in the game — genuine stakes — produces a different quality of commitment than detached preference.</p>
+`},
+
+{
+  id: 'black-swan',
+  title: 'The Black Swan',
+  category: 'risk',
+  source: 'Taleb (2007)',
+  tags: ['uncertainty', 'rare events', 'prediction', 'epistemology'],
+  body: `
+<p>Before Europeans reached Australia, every swan ever recorded in the Old World was white. The proposition "all swans are white" had been confirmed by millions of observations over thousands of years. Then someone saw a black swan. One observation undid millennia of accumulated evidence. This is the problem at the heart of inductive reasoning — and it applies far beyond ornithology.</p>
+<p>Nassim Taleb's 2007 book <em>The Black Swan</em> uses this image to describe events that are rare, extreme in impact, and only explainable in hindsight. The book's core argument is that we systematically underestimate the role these events play in shaping history, because our tools for understanding the world are built for normal distributions — and Black Swans don't come from normal distributions.</p>
+<h2>Mediocristan vs. Extremistan</h2>
+<p>Taleb draws a sharp distinction between two kinds of domains. In <strong>Mediocristan</strong>, no single observation can dramatically change the total. The weight of 1,000 people averages out predictably; adding one more person, however heavy, barely shifts the mean. Height, weight, calories — these follow Gaussian distributions where extremes are rare and bounded. Statistics and prediction work well here.</p>
+<p>In <strong>Extremistan</strong>, a single observation can dominate all the others combined. The wealth of 1,000 people can be utterly transformed by adding one billionaire. Book sales, earthquakes, wars, market crashes, viral content, city populations — these follow power laws where extremes are possible and when they occur, they dwarf everything else. Standard statistical tools, built for Mediocristan, fail catastrophically in Extremistan.</p>
+<p>The danger is importing Mediocristan thinking into Extremistan domains. Financial risk models assuming Gaussian distributions routinely assign probabilities like "a 25-standard-deviation event" to things that happened last week. The models aren't wrong within their assumptions — the assumptions are wrong about the domain.</p>
+<h2>The Problem of Silent Evidence</h2>
+<p>We learn from what we can observe. But Black Swans, almost by definition, lie outside what we've observed. Taleb calls this the problem of <strong>silent evidence</strong>: we see the successes, the survivors, the recorded history — and draw conclusions that systematically ignore everything that didn't survive to be recorded.</p>
+<p>Consider the graveyard of failed businesses. You observe thriving companies and study their strategies. You don't observe the thousands of companies that used identical strategies and failed. The survivorship bias gives a distorted picture of what causes success. The graveyard is silent. This applies everywhere: the ancient texts that survived are not a representative sample of ancient writing. The investment strategies touted by successful fund managers aren't representative of the strategy class — they're the ones that happened to work.</p>
+<h2>What To Do About It</h2>
+<p>Taleb's prescription is not to predict Black Swans better — he argues this is impossible — but to build systems that are robust to them, or better, antifragile. Accept that you will be surprised. Don't mistake absence of evidence for evidence of absence. Maintain redundancy and optionality. Be wary of complex systems with hidden interdependencies where a small perturbation can cascade unpredictably.</p>
+<p>Above all: distinguish between domains where past performance guides the future (Mediocristan) and domains where it doesn't (Extremistan). In the latter, sophisticated models may be worse than useless — they give false confidence while blinding you to what you don't know. In Extremistan, the honest position is Socratic: the main thing you know is that you don't know what's coming.</p>
+`},
+
+{
+  id: 'lindy-effect',
+  title: 'The Lindy Effect',
+  category: 'risk',
+  source: 'Taleb (2012)',
+  tags: ['longevity', 'time', 'prediction', 'durability'],
+  body: `
+<p>In the 1960s, comedians and actors would gather at Lindy's deli in New York and observe: the longer a Broadway show had been running, the longer it was likely to keep running. This wasn't because long-running shows got better with age — it was because survival itself was evidence of quality. A show that had already run five years had defeated the forces that kill most shows. The longer it survived, the more evidence it had accumulated that it could continue to survive.</p>
+<p>Nassim Taleb formalized this observation into the <strong>Lindy Effect</strong>: for non-perishable things, every additional period of survival implies a longer expected future life. Time is a quality filter that most other filters aren't.</p>
+<h2>Perishable vs. Non-Perishable</h2>
+<p>The Lindy Effect applies to non-perishable things — ideas, technologies, institutions, books, techniques. Not to biological organisms, which have natural lifespans. A 70-year-old human has less expected future life than a 30-year-old. But a 70-year-old technology or a 70-year-old book has <em>more</em> expected future life than a 3-year-old technology or a book published last month.</p>
+<p>Euclid's <em>Elements</em>, written around 300 BC, has survived 2,300 years. The Lindy Effect predicts it will survive another 2,300 years. A JavaScript framework released last year faces steep Lindy odds — most such frameworks don't survive five years. This isn't a statement about quality; it's a statement about the evidence that time provides.</p>
+<p>Books that have been continuously in print for a century have passed a gauntlet that most books don't survive. Each generation found them worth keeping. That accumulated evidence is not easily replicated by a new book, however good — it hasn't yet had the time to prove it.</p>
+<h2>Applications</h2>
+<p>In technology: prefer established tools with long track records for the core of your system. A database engine in production for 30 years has encountered and fixed edge cases that a new engine hasn't seen yet. The ancient tool isn't worse because it's old — it's better, precisely because it has survived long enough to be made reliable. Use new tools at the edges where failure is cheap.</p>
+<p>In knowledge: the older the book still being read, the more likely it contains something worth knowing. Recent bestsellers haven't yet passed the Lindy filter. The Stoics, Montaigne, Adam Smith — anything still read centuries after writing has proved it contains something non-trivial. The new management book may be excellent, but you don't yet know; the old one has already proved itself.</p>
+<p>In ideas: be suspicious of fashionable ideas that haven't survived serious intellectual challenge. The ideas that keep recurring across centuries and cultures — virtue ethics, the importance of accountability, the fragility of complex systems — are telling you something about reality that repeatedly strikes intelligent observers as true.</p>
+<h2>The Limit</h2>
+<p>The Lindy Effect breaks down when the environment changes fundamentally. A technology with a hundred years of Lindy properties may not survive ten years of a new type of competition. Horse-drawn carriages had very strong Lindy properties in 1900. The Lindy Effect is a guide to probability in stable environments, not a law of nature. It also says nothing about the best option available — only about the expected longevity of what has already survived. The oldest solution to a problem is not necessarily the best one. It's the one most proven to survive — which is a different, sometimes related, thing.</p>
+`},
+
+// ── LOGIC & FOUNDATIONS ───────────────────────────────────────────────────────
+
+{
+  id: 'godels-incompleteness',
+  title: "Gödel's Incompleteness Theorems",
+  category: 'logic',
+  source: 'Kurt Gödel (1931)',
+  tags: ['logic', 'foundations', 'formal systems', 'provability', 'self-reference'],
+  body: `
+<p>In 1900, David Hilbert stood before the International Congress of Mathematicians and issued a challenge: put all of mathematics on a solid, complete, consistent foundation. Find axioms from which every true mathematical statement could be proved, with no contradictions lurking in the system. This project — Hilbert's Program — consumed the next three decades of mathematical logic and attracted the finest minds of the era.</p>
+<p>In 1931, Kurt Gödel, a 25-year-old Austrian mathematician, showed it was impossible. Not difficult. Not incomplete yet. Impossible in principle. Any formal system powerful enough to express basic arithmetic either contains statements that are true but unprovable — or it's inconsistent. There is no escape.</p>
+<h2>What the Theorems Say</h2>
+<p>The <strong>First Incompleteness Theorem</strong>: Any consistent formal system F that is sufficiently powerful to express basic arithmetic contains a statement G that is true but cannot be proved within F. If G could be proved, F would be inconsistent. If ¬G could be proved, F would be unsound. Either way, F is incomplete.</p>
+<p>The <strong>Second Incompleteness Theorem</strong>: F cannot prove its own consistency. If F is consistent, the statement "F is consistent" is not provable within F.</p>
+<p>The proof technique is the conceptual earthquake. Gödel invented <strong>Gödel numbering</strong> — a way to encode statements about provability as numbers, so that the formal system could talk about its own statements using ordinary arithmetic. Every symbol, formula, and proof gets a unique number. Logical operations become arithmetic operations on those numbers. With this encoding, you can construct G — a statement that, when decoded, says: "This statement is not provable in F." If F proves G, then G is false — contradiction. If F doesn't prove G, then G is true — and unprovable. G is the formal cousin of the liar's paradox ("this sentence is false"), but engineered to say "unprovable" instead of "false." That shift is what makes it work inside mathematics rather than generating a useless paradox.</p>
+<h2>Why It Matters</h2>
+<p>The incompleteness theorems are often paraphrased as "there are limits to what we can know." The precise claim is narrower and more useful: within any sufficiently strong formal system, there exist truths that require stepping <em>outside</em> the system to see. Gödel's own proof of G's truth happens at the meta-level — in the reasoning where we observe the system from above. Inside F, G is neither provable nor disprovable. From outside, it's clearly true.</p>
+<p>For engineering: any formal specification language, type system, or model checker is itself a formal system. Gödel guarantees that for systems of sufficient expressive power, there will always be true properties that cannot be certified without stronger axioms — axioms the system can't prove from within itself. This isn't a bug in the tool. It is the shape of the territory.</p>
+<p>Alan Turing derived his Halting Problem undecidability from a construction closely related to Gödel's — two faces of the same result. There is no algorithm that decides whether an arbitrary program halts. There is no algorithm that proves arbitrary programs free of vulnerabilities. These aren't gaps waiting to be filled. They are permanent features of computation.</p>
+<p>What Gödel established, more durably than anything else: <em>any formal system is incomplete relative to a larger system.</em> You can always strengthen your axioms to prove more things — but the new system will have its own unprovable truths. There is no floor you can call bedrock. Build a system expressive enough to talk about itself, and you build in blind spots. The self-reference creates inescapable limits. This is not a bug to be patched. It is the shape of the territory.</p>
+`},
+
+// ── COMPUTATION ───────────────────────────────────────────────────────────────
+
+{
+  id: 'p-vs-np',
+  title: 'P, NP, and NP-Hard',
+  category: 'computation',
+  source: 'Cook (1971), Karp (1972)',
+  tags: ['complexity', 'algorithms', 'decidability', 'intractability'],
+  body: `
+<p>Imagine planning a road trip through 20 cities, returning home at the end. You want the shortest route. Your laptop starts checking options. There are roughly 20!/2 ≈ 1.2 × 10¹⁸ possible routes. At a billion operations per second, that's 38 years of computation. For 50 cities, the age of the universe isn't enough.</p>
+<p>Now a colleague hands you a specific route: "Is this one under 4,200 km?" You verify it in seconds — just add up the distances. This gap between how hard it is to <em>find</em> a solution and how easy it is to <em>check</em> one is at the heart of computational complexity theory.</p>
+<h2>P and NP</h2>
+<p><strong>P</strong> is the class of problems solvable in polynomial time: as input size n grows, computation time grows as n<sup>k</sup> for some fixed k. Sorting a list, finding the shortest path in a graph, deciding if a number is prime — all in P. Tractable, feasible, fast in practice.</p>
+<p><strong>NP</strong> is the class of problems where solutions can be <em>verified</em> in polynomial time. Every problem in P is also in NP — if you can solve it fast, you can certainly check it fast. The great open question — arguably the most famous unsolved problem in mathematics — is whether P = NP. If it does, finding and checking are fundamentally the same thing: any problem whose answer can be recognized quickly can also be solved quickly. Almost everyone believes P ≠ NP. Nobody has proved it.</p>
+<p><strong>NP-complete</strong> problems are the hardest in NP. A problem is NP-complete if every other NP problem can be reduced to it in polynomial time. Stephen Cook proved in 1971 that Boolean satisfiability (SAT) is NP-complete. Richard Karp then showed 21 other famous problems — graph coloring, subset sum, the traveling salesman decision problem — are all NP-complete. Solve any one efficiently, and you've solved them all.</p>
+<p><strong>NP-hard</strong> problems are at least as hard as NP-complete problems, but they don't have to be in NP themselves — their solutions may not even be efficiently verifiable. The optimization version of the traveling salesman problem (find the <em>actual shortest</em> route, not just check whether one shorter than k exists) is NP-hard. You can't efficiently verify a claimed optimum the way you can verify a route's length.</p>
+<h2>Why It Changes How You Build Things</h2>
+<p>When you recognize an NP-complete problem in the wild, you stop searching for an exact polynomial-time algorithm — not because you're lazy, but because if one existed, it would simultaneously break modern cryptography and solve every hard optimization and scheduling problem ever posed. The hardness is load-bearing. Modern encryption relies on the presumed difficulty of problems like factoring large integers (believed to be hard, though not proved NP-complete).</p>
+<p>A requirements conflict detector that mysteriously scales badly is probably encoding a SAT instance. A scheduling tool that takes forever on large inputs is likely NP-hard. The right response isn't to optimize harder — it's to reach for approximation algorithms, heuristics, or constraint on input size.</p>
+<p>Crucially, NP-completeness describes <em>worst-case</em> complexity. The traveling salesman problem on geographically clustered cities is often solved near-optimally in milliseconds by branch-and-bound. Modern SAT solvers (Z3, CaDiCaL) handle millions of variables in practice despite worst-case exponential behavior. Know the theoretical limits; know when your actual instance is tractable.</p>
+<p>If P = NP, the consequences would be extraordinary: mathematical proofs could be discovered as easily as verified; drug molecules with desired properties found as easily as tested; the act of creation would collapse into the act of recognition. Almost no one believes this. But the question of <em>why</em> finding is harder than checking — why creativity is harder than evaluation — remains one of the deepest open problems in human knowledge.</p>
+`},
+
+// ── PHILOSOPHY ────────────────────────────────────────────────────────────────
+
+{
+  id: 'anthropic-principle',
+  title: 'The Anthropic Principle',
+  category: 'philosophy',
+  source: 'Brandon Carter (1973)',
+  tags: ['cosmology', 'selection effects', 'observation', 'fine-tuning'],
+  body: `
+<p>You are reading this. That fact is less trivial than it sounds. The universe had to produce stars that fused hydrogen into carbon, those stars had to explode and scatter that carbon across space, the debris had to form a planet at the right distance from a stable star, life had to emerge and survive for billions of years, and one particular species had to develop language, writing, and the curiosity to ask why any of this happened. At every step, a vast number of things had to go right. The question is: what should we infer from the fact that they did?</p>
+<p>The <strong>Anthropic Principle</strong>, formulated by physicist Brandon Carter in 1973, is the observation that our existence as observers constrains what we can observe about the universe. It seems obvious once stated — you can only observe a universe that permits your existence — but its implications are subtle and contested.</p>
+<h2>The Weak Anthropic Principle</h2>
+<p>The <strong>Weak Anthropic Principle (WAP)</strong> is the modest, uncontroversial version: the conditions we observe in the universe must be compatible with the existence of observers. We find ourselves in a universe with the right physical constants for complex chemistry, stable stars, and long timescales not because these conditions are necessarily common, but because we could only exist in a universe that has them.</p>
+<p>This is a <strong>selection effect</strong> argument. Suppose many universes exist with varying physical constants, and only a small fraction has constants compatible with life. An observer in one of those rare universes who asks "why are the constants so finely tuned?" is asking the wrong question — the only possible observers are inside the life-permitting universes. There's nothing further to explain. The observation was selected, not generated.</p>
+<p>The WAP has genuine explanatory power. The fine-tuning of physical constants — the cosmological constant, the strength of electromagnetism, the mass ratio of proton to electron — looks impossibly improbable from a naive probability calculation. The WAP dissolves some of this apparent improbability: if the constants varied, we'd only be here to notice the ones that work. No designer required, no special significance — just the recognition that observers are in a biased sample.</p>
+<h2>The Strong Anthropic Principle</h2>
+<p>The <strong>Strong Anthropic Principle (SAP)</strong> goes further: the universe <em>must</em> have properties that permit observers to exist at some point. The word "must" is doing a lot of work here, and this is where serious controversy begins.</p>
+<p>One reading is teleological — the universe is somehow oriented toward producing observers, or consciousness is necessary for the universe to be real. This echoes certain interpretations of quantum mechanics (where observation collapses the wave function) and some philosophical cosmologies. Most physicists and philosophers find this reading unwarranted.</p>
+<p>A more defensible reading is probabilistic: if we're in a multiverse of many universes with varying properties, the ones that produce observers are the ones observed, and given enough universes, some will have the right constants by chance. The SAP then becomes a consequence of the WAP applied at larger scale.</p>
+<h2>Selection Effects in Practice</h2>
+<p>The anthropic principle is a specific instance of a more general and practically important concept: <strong>selection effects</strong>. Whenever your ability to observe something depends on the thing being a certain way, your sample is biased toward that way.</p>
+<p>Why do most people think they're above-average drivers? Because the genuinely bad drivers who recognized it stopped driving — leaving a sample biased toward those who think they're competent. Why did WWII analysts find returning bombers were damaged everywhere <em>except</em> the engines? Because bombers with engine damage didn't return to be studied. Why do historical records suggest ancient wisdom was particularly profound? Because only texts judged profound survived to be copied.</p>
+<p>The anthropic principle trains you to ask: am I observing a representative sample, or is my position as an observer itself selecting for certain outcomes? Once you see this question, you see it everywhere — in survivorship bias in investing, in outcome bias in judging decisions, in the way successful people attribute their success to skill rather than luck. Almost all samples are biased in some direction. The question is whether you've accounted for the bias introduced by the act of observation itself.</p>
+`},
+
+]; // end CONCEPTS
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+
+const catMap = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+const conceptMap = Object.fromEntries(CONCEPTS.map(c => [c.id, c]));
+
+function getRoute() {
+  const hash = location.hash.slice(1) || '/';
+  const m = hash.match(/^\/concept\/(.+)$/);
+  return m ? { view: 'concept', id: m[1] } : { view: 'home' };
+}
+
+function go(hash) { location.hash = hash; }
+
+function renderHome() {
+  const groups = CATEGORIES
+    .map(cat => ({ cat, items: CONCEPTS.filter(c => c.category === cat.id) }))
+    .filter(g => g.items.length > 0);
+
+  return `
+    <div class="header">
+      <span class="site-name">Mindarium</span>
+      <span class="site-count">${CONCEPTS.length} concepts</span>
+    </div>
+    ${groups.map(({ cat, items }) => `
+      <div class="section-label">${cat.name}</div>
+      <p class="section-desc">${cat.desc}</p>
+      <ul class="concept-list">
+        ${items.map(c => `
+          <li class="concept-item">
+            <a class="concept-link" href="#/concept/${c.id}">
+              <span class="concept-name">${c.title}</span>
+              <span class="concept-source">${c.source}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    `).join('')}
+    <div class="home-footer">Mindarium &middot; Complex ideas, clearly explained</div>
+  `;
+}
+
+function renderConcept(id) {
+  const c = conceptMap[id];
+  if (!c) return `<div class="header"><button class="back-btn" onclick="go('/')">← Back</button></div><p style="color:var(--muted);margin-top:2rem">Not found.</p>`;
+  const cat = catMap[c.category];
+  return `
+    <div class="article-wrap">
+      <div class="header">
+        <button class="back-btn" onclick="go('/')">← Mindarium</button>
+      </div>
+      <p class="article-cat">${cat.name}</p>
+      <h1 class="article-title">${c.title}</h1>
+      <div class="tags">${c.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      <div class="article-body">${c.body}</div>
+      <div class="article-footer">Source: ${c.source}</div>
+    </div>
+  `;
+}
+
+function render() {
+  const route = getRoute();
+  const html = route.view === 'concept' ? renderConcept(route.id) : renderHome();
+  document.getElementById('app').innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+window.go = go;
+window.addEventListener('hashchange', render);
+document.addEventListener('DOMContentLoaded', render);
+
+</script>
+</body>
+</html>
