@@ -179,6 +179,7 @@
     }
     .article-body ul { list-style: disc; }
     .article-body li { margin-bottom: 0.35rem; }
+    .chart-label { font-size: 0.775rem; color: var(--muted); margin: 0.4rem 0 1.5rem; line-height: 1.55; }
     .article-footer {
       margin-top: 2.5rem;
       padding-top: 1.25rem;
@@ -641,6 +642,10 @@ const CHEM_CONCEPTS = [
 <h2>What the Moments Give You</h2>
 <p>The number-average molecular weight M<sub>n</sub> is the ratio of the first to zeroth moment of the total chain distribution, multiplied by the monomer molecular weight. It weights each chain equally — equivalent to what end-group titration measures. The weight-average molecular weight M<sub>w</sub> uses the second over first moment ratio; long chains contribute disproportionately because each is weighted by its mass. The dispersity Đ = M<sub>w</sub>/M<sub>n</sub> is the key process metric. Living polymerization gives Đ approaching 1. Free-radical polymerization with termination by disproportionation gives Đ around 2. Values above 3 indicate chain transfer, multiple initiation mechanisms, or non-ideal mixing.</p>
 <p>Comparing a continuous stirred-tank reactor (CSTR) against a plug-flow tubular reactor using only the moment equations reveals a fundamental tradeoff: the CSTR's back-mixing broadens the distribution, because chains experience different residence times and grow to different lengths. At steady state the moments reduce to algebraic equations, making it straightforward to see how reactor type, temperature, and initiator concentration each shift M<sub>n</sub>, M<sub>w</sub>, and Đ — without ever computing the full distribution curve.</p>
+<canvas id="chart-mwd" height="220" style="width:100%;display:block;margin-top:1.75rem"></canvas>
+<p class="chart-label">Schulz–Flory distribution (DPₙ = 60, Đ ≈ 2): N(n) decays monotonically from n = 1 (zeroth moment dominates near the origin) while W(n) peaks near Mₙ. The gap between Mₙ and Mw is the direct signature of the second moment exceeding the square of the first.</p>
+<canvas id="chart-dispersity" height="200" style="width:100%;display:block;margin-top:1.75rem"></canvas>
+<p class="chart-label">Three weight distributions sharing the same Mₙ = 100 but different dispersity values. Zeroth and first moments are identical across all three — only the second moment differs, broadening the curve and shifting its peak to lower molecular weight.</p>
 <h2>The Limits</h2>
 <p>The moment equations cannot recover the full molecular weight distribution. They provide its first few statistical descriptors — mean, variance, and skewness if you carry the third moment — but not its shape. A distribution with a given M<sub>n</sub>, M<sub>w</sub>, and Đ could be unimodal or bimodal, symmetric or skewed. For processes that produce bimodal distributions — blends, staged reactors, or branching-dominated systems — the moments alone are insufficient to predict processing behavior or mechanical properties reliably.</p>
 <p>The deeper limitation is closure. When branching reactions are present, the moment equations for one order generate terms involving the next higher moment, producing an infinite hierarchy. A closure approximation must truncate it, typically by assuming the distribution follows a specific functional form — Schulz-Flory, log-normal — that expresses the highest required moment in terms of lower ones. The accuracy depends entirely on how well that assumed form matches reality. For linear chains with a single initiation mechanism and well-characterized kinetics, the method is exact within the kinetic model. For branched systems like polyethylene from Ziegler-Natta catalysis, where multiple active site types produce chains with distinct kinetics, closure errors can be substantial. The method of moments is the standard tool in polymerization reactor design precisely because it concentrates the engineering-relevant information into a computationally accessible form — and because knowing where it breaks down is as useful as knowing where it works.</p>
@@ -766,6 +771,129 @@ function renderChemConcept(id) {
   `;
 }
 
+function drawMomentsCharts() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const co = isDark
+    ? { fg: '#e8e8e4', mu: '#9ca3af', bd: '#3a3a3a', ac: '#60a5fa', gr: '#4ade80' }
+    : { fg: '#1a1a1a', mu: '#6b7280', bd: '#e5e5e0', ac: '#1a56db', gr: '#16a34a' };
+
+  function setup(id, h, fn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const dpr = window.devicePixelRatio || 1;
+    el.width = el.offsetWidth * dpr;
+    el.height = h * dpr;
+    el.style.height = h + 'px';
+    const ctx = el.getContext('2d');
+    ctx.scale(dpr, dpr);
+    fn(ctx, el.offsetWidth, h);
+  }
+
+  setup('chart-mwd', 220, (ctx, W, H) => {
+    const pad = { t: 28, r: 20, b: 42, l: 44 };
+    const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+    const p = 59 / 60, nMax = 300;
+    const ns = Array.from({ length: nMax }, (_, i) => i + 1);
+    const Nn = ns.map(n => (1 - p) * Math.pow(p, n - 1));
+    const Wn = ns.map(n => n * (1 - p) ** 2 * Math.pow(p, n - 1));
+    const maxN = Nn[0], maxW = Math.max(...Wn);
+    const Mn = 60, Mw = Math.round((1 + p) / (1 - p));
+
+    const xp = n => pad.l + (n / nMax) * iW;
+    const yN = v => pad.t + iH * (1 - 0.88 * v / maxN);
+    const yW = v => pad.t + iH * (1 - 0.88 * v / maxW);
+
+    ctx.strokeStyle = co.bd; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + iH); ctx.lineTo(pad.l + iW, pad.t + iH); ctx.stroke();
+
+    ctx.fillStyle = co.mu; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center';
+    [0, 60, 120, 180, 240, 300].forEach(n => ctx.fillText(n, xp(n), pad.t + iH + 13));
+    ctx.fillText('chain length  n', pad.l + iW / 2, H - 4);
+
+    ctx.save(); ctx.translate(12, pad.t + iH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.fillText('normalised fraction', 0, 0); ctx.restore();
+
+    ctx.strokeStyle = co.mu; ctx.lineWidth = 1.5; ctx.beginPath();
+    ns.forEach((n, i) => i === 0 ? ctx.moveTo(xp(n), yN(Nn[i])) : ctx.lineTo(xp(n), yN(Nn[i]))); ctx.stroke();
+
+    ctx.strokeStyle = co.ac; ctx.lineWidth = 2; ctx.beginPath();
+    ns.forEach((n, i) => i === 0 ? ctx.moveTo(xp(n), yW(Wn[i])) : ctx.lineTo(xp(n), yW(Wn[i]))); ctx.stroke();
+
+    ctx.setLineDash([4, 3]);
+    [[Mn, co.mu, 'Mₙ = ' + Mn], [Mw, co.ac, 'Mw = ' + Mw]].forEach(([x, col, lbl]) => {
+      ctx.strokeStyle = col; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xp(x), pad.t + 24); ctx.lineTo(xp(x), pad.t + iH); ctx.stroke();
+      ctx.fillStyle = col; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(lbl, xp(x), pad.t + 18);
+    });
+    ctx.setLineDash([]);
+
+    const lx = pad.l + Math.floor(iW * 0.58), ly = pad.t + 32;
+    [[co.mu, 'N(n)  number fraction', 1.5], [co.ac, 'W(n)  weight fraction', 2]].forEach(([col, lbl, lw], i) => {
+      ctx.strokeStyle = col; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(lx, ly + i * 17 + 3); ctx.lineTo(lx + 16, ly + i * 17 + 3); ctx.stroke();
+      ctx.fillStyle = co.fg; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(lbl, lx + 20, ly + i * 17 + 7);
+    });
+  });
+
+  setup('chart-dispersity', 200, (ctx, W, H) => {
+    const pad = { t: 28, r: 20, b: 42, l: 44 };
+    const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+    const Mn = 100, xMax = 600;
+    const xs = Array.from({ length: 600 }, (_, i) => i + 1);
+
+    function lpdf(x, mu, sig) {
+      const z = (Math.log(x) - mu) / sig;
+      return Math.exp(-0.5 * z * z) / (x * sig * 2.5066);
+    }
+
+    const cases = [
+      { D: 1.1, lbl: 'Đ ≈ 1.1', col: co.gr },
+      { D: 1.5, lbl: 'Đ ≈ 1.5', col: co.ac },
+      { D: 2.0, lbl: 'Đ ≈ 2.0', col: co.mu },
+    ];
+    const curves = cases.map(({ D, lbl, col }) => {
+      const sig = Math.sqrt(Math.log(D));
+      const mu = Math.log(Mn) + sig * sig / 2;
+      return { ys: xs.map(x => lpdf(x, mu, sig)), lbl, col };
+    });
+    const gMax = Math.max(...curves.flatMap(c => c.ys));
+
+    const xp = x => pad.l + (x / xMax) * iW;
+    const yp = v => pad.t + iH * (1 - 0.9 * v / gMax);
+
+    ctx.strokeStyle = co.bd; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + iH); ctx.lineTo(pad.l + iW, pad.t + iH); ctx.stroke();
+
+    ctx.fillStyle = co.mu; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center';
+    [0, 100, 200, 300, 400, 500, 600].forEach(n => ctx.fillText(n, xp(n), pad.t + iH + 13));
+    ctx.fillText('molecular weight', pad.l + iW / 2, H - 4);
+
+    ctx.save(); ctx.translate(12, pad.t + iH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center'; ctx.fillText('w(M)', 0, 0); ctx.restore();
+
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = co.bd; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xp(Mn), pad.t + 22); ctx.lineTo(xp(Mn), pad.t + iH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = co.mu; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Mₙ = 100', xp(Mn), pad.t + 16);
+
+    curves.forEach(({ ys, col }) => {
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+      xs.forEach((x, i) => i === 0 ? ctx.moveTo(xp(x), yp(ys[i])) : ctx.lineTo(xp(x), yp(ys[i]))); ctx.stroke();
+    });
+
+    const lx = pad.l + Math.floor(iW * 0.62), ly = pad.t + 28;
+    curves.forEach(({ lbl, col }, i) => {
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(lx, ly + i * 18 + 4); ctx.lineTo(lx + 16, ly + i * 18 + 4); ctx.stroke();
+      ctx.fillStyle = co.fg; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(lbl, lx + 20, ly + i * 18 + 8);
+    });
+  });
+}
+
 function render() {
   const route = getRoute();
   let html;
@@ -775,6 +903,7 @@ function render() {
   else html = renderHome();
   document.getElementById('app').innerHTML = html;
   window.scrollTo(0, 0);
+  if (route.view === 'chem-concept') requestAnimationFrame(drawMomentsCharts);
 }
 
 window.go = go;
